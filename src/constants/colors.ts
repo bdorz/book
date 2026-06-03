@@ -1,0 +1,32 @@
+export const Colors = {
+  background: '#F0F0F8',
+  card: '#FFFFFF',
+  primary: '#7C6FF7',
+  expense: '#FF4757',
+  income: '#00C897',
+  creditCard: '#2D9CDB',
+  family: '#FF9F43',
+  textPrimary: '#1A1A2E',
+  textSecondary: '#8E8E93',
+  textLight: '#BDBDBD',
+  border: '#E8E8EE',
+  gradientStart: '#9B87F5',
+  gradientEnd: '#6B98F5',
+  shadow: 'rgba(0,0,0,0.08)',
+};
+
+export const CategoryColors: Record<string, string> = {
+  餐飲: '#FF9F43',
+  購物: '#FF4757',
+  交通: '#2D9CDB',
+  娛樂: '#A29BFE',
+  醫療: '#00CEC9',
+  住房: '#6C5CE7',
+  教育: '#0984E3',
+  其他: '#636E72',
+  薪資: '#00C897',
+  獎金: '#FDCB6E',
+  投資: '#00B894',
+  代付: '#FF9F43',
+  代收: '#00C897',
+};

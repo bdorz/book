@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); cd \"c:\\\\Users\\\\aegis\\\\OneDrive\\\\Desktop\\\\CODE\\\\book\"; npx expo export --platform web --output-dir /tmp/expo-check 2>&1 | Select-Object -Last 15)",
-      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); cd \"c:\\\\Users\\\\aegis\\\\OneDrive\\\\Desktop\\\\CODE\\\\book\"; npx expo export --platform web --output-dir /tmp/expo-check2 2>&1 | Select-Object -Last 8)"
-    ]
-  }
-}

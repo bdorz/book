@@ -1,75 +1,85 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import type { Transaction } from '@/store/types';
-import { getCategoryColor, getCategoryEmoji } from '@/constants/categories';
-import { formatDate } from '@/utils/dateUtils';
-import { useStore } from '@/store';
+import React from 'react';
+import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {Transaction} from '../types';
+import {Colors, CategoryColors} from '../constants/colors';
+import {
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+  CREDIT_CATEGORIES,
+  FAMILY_CATEGORIES,
+} from '../constants/categories';
 
 interface Props {
   transaction: Transaction;
-  showDelete?: boolean;
+  onPress: (t: Transaction) => void;
 }
 
-const PAYMENT_LABELS: Record<string, string> = {
-  cash: '現金',
-  credit_card: '信用卡',
-  transfer: '轉帳',
-};
+function getTypeLabel(type: string): string {
+  switch (type) {
+    case 'expense': return '支出';
+    case 'income': return '收入';
+    case 'credit_card': return '刷卡';
+    case 'family_in': return '代收';
+    case 'family_out': return '代付';
+    default: return '';
+  }
+}
 
-export default function TransactionItem({ transaction, showDelete = false }: Props) {
-  const deleteTransaction = useStore((s) => s.deleteTransaction);
-  const isExpense = transaction.type === 'expense';
-  const color = getCategoryColor(transaction.category);
-  const emoji = getCategoryEmoji(transaction.category);
+function getAmountColor(type: string): string {
+  switch (type) {
+    case 'income':
+    case 'family_in': return Colors.income;
+    case 'expense': return Colors.expense;
+    case 'credit_card': return Colors.creditCard;
+    case 'family_out': return Colors.family;
+    default: return Colors.textPrimary;
+  }
+}
 
-  const handleDelete = () => {
-    Alert.alert('刪除', '確定要刪除這筆紀錄嗎？', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '刪除',
-        style: 'destructive',
-        onPress: () => deleteTransaction(transaction.id),
-      },
-    ]);
-  };
+function getAmountPrefix(type: string): string {
+  return type === 'income' || type === 'family_in' ? '+' : '-';
+}
 
-  const handleEdit = () => {
-    router.push({ pathname: '/edit-transaction', params: { id: transaction.id } });
-  };
+function getCategoryIcon(type: string, category: string): string {
+  const allCats = [
+    ...EXPENSE_CATEGORIES,
+    ...INCOME_CATEGORIES,
+    ...CREDIT_CATEGORIES,
+    ...FAMILY_CATEGORIES,
+  ];
+  return allCats.find(c => c.value === category)?.icon ?? 'circle';
+}
+
+export default function TransactionItem({transaction, onPress}: Props) {
+  const color = CategoryColors[transaction.category] ?? Colors.textSecondary;
+  const icon = getCategoryIcon(transaction.type, transaction.category);
+  const amountColor = getAmountColor(transaction.type);
+  const prefix = getAmountPrefix(transaction.type);
+  const typeLabel = getTypeLabel(transaction.type);
+
+  const [, month, day] = transaction.date.split('-');
 
   return (
-    <TouchableOpacity style={styles.row} onPress={handleEdit} activeOpacity={0.7}>
-      <View style={[styles.icon, { backgroundColor: color + '28' }]}>
-        <Text style={styles.emoji}>{emoji}</Text>
+    <TouchableOpacity style={styles.row} onPress={() => onPress(transaction)} activeOpacity={0.7}>
+      <View style={[styles.iconWrap, {backgroundColor: color + '20'}]}>
+        <Icon name={icon} size={18} color={color} />
       </View>
-
       <View style={styles.info}>
         <View style={styles.topRow}>
           <Text style={styles.category}>{transaction.category}</Text>
-          {transaction.isForFamily && (
-            <View style={styles.familyTag}>
-              <Text style={styles.familyTagText}>代買</Text>
-            </View>
-          )}
+          <View style={[styles.typeBadge, {backgroundColor: amountColor + '18'}]}>
+            <Text style={[styles.typeText, {color: amountColor}]}>{typeLabel}</Text>
+          </View>
         </View>
-        <Text style={styles.meta}>
-          {formatDate(transaction.date)}
-          {transaction.note ? ` · ${transaction.note}` : ''}
-          {' · '}{PAYMENT_LABELS[transaction.paymentMethod]}
-        </Text>
+        {transaction.description ? (
+          <Text style={styles.desc} numberOfLines={1}>{transaction.description}</Text>
+        ) : null}
+        <Text style={styles.date}>{`${month}/${day}`}</Text>
       </View>
-
-      <View style={styles.right}>
-        <Text style={[styles.amount, { color: isExpense ? '#EF4444' : '#22C55E' }]}>
-          {isExpense ? '-' : '+'}NT${transaction.amount.toLocaleString()}
-        </Text>
-        {showDelete && (
-          <TouchableOpacity onPress={handleDelete} hitSlop={10} style={styles.deleteBtn}>
-            <Ionicons name="trash-outline" size={15} color="#D1D5DB" />
-          </TouchableOpacity>
-        )}
-      </View>
+      <Text style={[styles.amount, {color: amountColor}]}>
+        {prefix}NT${transaction.amount.toLocaleString()}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -78,20 +88,23 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 11,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F0F0F0',
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    elevation: 2,
+    shadowColor: Colors.shadow,
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 1,
+    shadowRadius: 4,
   },
-  icon: {
+  iconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-  },
-  emoji: {
-    fontSize: 18,
   },
   info: {
     flex: 1,
@@ -102,35 +115,31 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   category: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#1F2937',
+    color: Colors.textPrimary,
   },
-  familyTag: {
-    backgroundColor: '#EDE9FE',
+  typeBadge: {
     paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  familyTagText: {
+  typeText: {
     fontSize: 10,
-    color: '#7C3AED',
     fontWeight: '600',
   },
-  meta: {
-    fontSize: 11,
-    color: '#9CA3AF',
+  desc: {
+    fontSize: 12,
+    color: Colors.textSecondary,
     marginTop: 2,
   },
-  right: {
-    alignItems: 'flex-end',
-    gap: 4,
+  date: {
+    fontSize: 11,
+    color: Colors.textLight,
+    marginTop: 2,
   },
   amount: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
-  },
-  deleteBtn: {
-    padding: 2,
   },
 });

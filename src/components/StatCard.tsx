@@ -1,22 +1,23 @@
-import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import {View, Text, StyleSheet} from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {Colors} from '../constants/colors';
 
-interface StatCardProps {
+interface Props {
   title: string;
   amount: number;
-  amountColor: string;
-  iconName: keyof typeof Ionicons.glyphMap;
-  iconColor: string;
+  icon: string;
+  color: string;
 }
 
-export default function StatCard({ title, amount, amountColor, iconName, iconColor }: StatCardProps) {
+export default function StatCard({title, amount, icon, color}: Props) {
   return (
     <View style={styles.card}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
-        <Ionicons name={iconName} size={18} color={iconColor} />
+      <View style={[styles.iconWrap, {backgroundColor: color + '20'}]}>
+        <Icon name={icon} size={20} color={color} />
       </View>
-      <Text style={[styles.amount, { color: amountColor }]}>
+      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.amount, {color}]}>
         NT${amount.toLocaleString()}
       </Text>
     </View>
@@ -25,29 +26,32 @@ export default function StatCard({ title, amount, amountColor, iconName, iconCol
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
     flex: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    padding: 14,
+    margin: 4,
+    shadowColor: Colors.shadow,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 8,
   },
   title: {
     fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
+    color: Colors.textSecondary,
+    marginBottom: 4,
   },
   amount: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
 });
