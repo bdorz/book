@@ -1,11 +1,9 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import {Alert, Platform} from 'react-native';
+import {Alert, Platform, Linking} from 'react-native';
 
-// 設定你的 GitHub 帳號和 repo 名稱
 export const GITHUB_OWNER = 'bdorz';
 export const GITHUB_REPO = 'book';
-
-export const CURRENT_VERSION = '1.0.0';
+export const CURRENT_VERSION = '1.0.1';
 
 interface GithubRelease {
   tag_name: string;
@@ -45,24 +43,26 @@ export async function downloadAndInstallApk(
     return;
   }
 
-  const fileName = `BookApp-update.apk`;
-  const downloadDest = `${ReactNativeBlobUtil.fs.dirs.DownloadDir}/${fileName}`;
+  // 用 CacheDir 不需要 WRITE_EXTERNAL_STORAGE 權限
+  const downloadDest = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/BookApp-update.apk`;
 
   try {
+    // 若舊檔存在先刪掉
+    const exists = await ReactNativeBlobUtil.fs.exists(downloadDest);
+    if (exists) {
+      await ReactNativeBlobUtil.fs.unlink(downloadDest);
+    }
+
     await ReactNativeBlobUtil.config({
-      fileCache: true,
       path: downloadDest,
-      addAndroidDownloads: {
-        useDownloadManager: false,
-        notification: false,
-        path: downloadDest,
-      },
     })
       .fetch('GET', url)
-      .progress((received, total) => {
-        onProgress(Number(received) / Number(total));
+      .progress({interval: 250}, (received, total) => {
+        const pct = Number(total) > 0 ? Number(received) / Number(total) : 0;
+        onProgress(pct);
       });
 
+    // 觸發 Android 安裝器
     await ReactNativeBlobUtil.android.actionViewIntent(
       downloadDest,
       'application/vnd.android.package-archive',
