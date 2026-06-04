@@ -1,20 +1,4 @@
-export const Colors = {
-  background: '#F0F0F8',
-  card: '#FFFFFF',
-  primary: '#7C6FF7',
-  expense: '#FF4757',
-  income: '#00C897',
-  creditCard: '#2D9CDB',
-  family: '#FF9F43',
-  textPrimary: '#1A1A2E',
-  textSecondary: '#8E8E93',
-  textLight: '#BDBDBD',
-  border: '#E8E8EE',
-  gradientStart: '#9B87F5',
-  gradientEnd: '#6B98F5',
-  shadow: 'rgba(0,0,0,0.08)',
-};
-
+// Static colors that don't change with theme (category palette)
 export const CategoryColors: Record<string, string> = {
   餐飲: '#FF9F43',
   購物: '#FF4757',
@@ -30,3 +14,6 @@ export const CategoryColors: Record<string, string> = {
   代付: '#FF9F43',
   代收: '#00C897',
 };
+
+// Re-export theme colors for backwards compat
+export {LightColors as Colors} from '../context/ThemeContext';

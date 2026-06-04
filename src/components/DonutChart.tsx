@@ -1,7 +1,7 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {View, Text, StyleSheet} from 'react-native';
 import Svg, {Path, G} from 'react-native-svg';
-import {Colors} from '../constants/colors';
+import {useColors, AppColors} from '../context/ThemeContext';
 
 interface Segment {
   value: number;
@@ -21,47 +21,26 @@ function polarToCartesian(cx: number, cy: number, r: number, angle: number) {
   return {x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad)};
 }
 
-function arcPath(
-  cx: number,
-  cy: number,
-  outerR: number,
-  innerR: number,
-  startAngle: number,
-  endAngle: number,
-): string {
+function arcPath(cx: number, cy: number, outerR: number, innerR: number, startAngle: number, endAngle: number): string {
   const s1 = polarToCartesian(cx, cy, outerR, startAngle);
   const e1 = polarToCartesian(cx, cy, outerR, endAngle);
   const s2 = polarToCartesian(cx, cy, innerR, startAngle);
   const e2 = polarToCartesian(cx, cy, innerR, endAngle);
   const large = endAngle - startAngle > 180 ? 1 : 0;
-  return [
-    `M ${s1.x} ${s1.y}`,
-    `A ${outerR} ${outerR} 0 ${large} 1 ${e1.x} ${e1.y}`,
-    `L ${e2.x} ${e2.y}`,
-    `A ${innerR} ${innerR} 0 ${large} 0 ${s2.x} ${s2.y}`,
-    'Z',
-  ].join(' ');
+  return [`M ${s1.x} ${s1.y}`, `A ${outerR} ${outerR} 0 ${large} 1 ${e1.x} ${e1.y}`, `L ${e2.x} ${e2.y}`, `A ${innerR} ${innerR} 0 ${large} 0 ${s2.x} ${s2.y}`, 'Z'].join(' ');
 }
 
-export default function DonutChart({
-  segments,
-  size = 100,
-  strokeWidth = 22,
-  title,
-}: Props) {
+export default function DonutChart({segments, size = 100, strokeWidth = 22, title}: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const cx = size / 2;
   const cy = size / 2;
   const outerR = (size - 8) / 2;
   const innerR = outerR - strokeWidth;
   const total = segments.reduce((s, seg) => s + seg.value, 0);
-
   const hasData = total > 0;
   let currentAngle = 0;
-
-  const topCategories = segments
-    .filter(s => s.value > 0)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 3);
+  const topCategories = segments.filter(s => s.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
 
   return (
     <View style={styles.container}>
@@ -69,27 +48,15 @@ export default function DonutChart({
       <Svg width={size} height={size}>
         <G>
           {hasData ? (
-            segments
-              .filter(s => s.value > 0)
-              .map((seg, i) => {
-                const pct = seg.value / total;
-                const sweep = pct * 358;
-                const start = currentAngle;
-                const end = currentAngle + sweep;
-                currentAngle = end + 1;
-                return (
-                  <Path
-                    key={i}
-                    d={arcPath(cx, cy, outerR, innerR, start, end)}
-                    fill={seg.color}
-                  />
-                );
-              })
+            segments.filter(s => s.value > 0).map((seg, i) => {
+              const sweep = (seg.value / total) * 358;
+              const start = currentAngle;
+              const end = currentAngle + sweep;
+              currentAngle = end + 1;
+              return <Path key={i} d={arcPath(cx, cy, outerR, innerR, start, end)} fill={seg.color} />;
+            })
           ) : (
-            <Path
-              d={arcPath(cx, cy, outerR, innerR, 0, 359.9)}
-              fill={Colors.border}
-            />
+            <Path d={arcPath(cx, cy, outerR, innerR, 0, 359.9)} fill={colors.border} />
           )}
         </G>
       </Svg>
@@ -98,12 +65,8 @@ export default function DonutChart({
           topCategories.map((seg, i) => (
             <View key={i} style={styles.legendRow}>
               <View style={[styles.dot, {backgroundColor: seg.color}]} />
-              <Text style={styles.legendLabel} numberOfLines={1}>
-                {seg.label}
-              </Text>
-              <Text style={styles.legendPct}>
-                ({Math.round((seg.value / total) * 100)}%)
-              </Text>
+              <Text style={styles.legendLabel} numberOfLines={1}>{seg.label}</Text>
+              <Text style={styles.legendPct}>({Math.round((seg.value / total) * 100)}%)</Text>
             </View>
           ))
         ) : (
@@ -114,44 +77,15 @@ export default function DonutChart({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 8,
-  },
-  legend: {
-    marginTop: 8,
-    width: '100%',
-  },
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 3,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 4,
-  },
-  legendLabel: {
-    fontSize: 11,
-    color: Colors.textPrimary,
-    flex: 1,
-  },
-  legendPct: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
-  emptyText: {
-    fontSize: 11,
-    color: Colors.textLight,
-    textAlign: 'center',
-  },
-});
+function createStyles(c: AppColors) {
+  return StyleSheet.create({
+    container: {alignItems: 'center', flex: 1},
+    title: {fontSize: 13, fontWeight: '600', color: c.textPrimary, marginBottom: 8},
+    legend: {marginTop: 8, width: '100%'},
+    legendRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 3},
+    dot: {width: 8, height: 8, borderRadius: 4, marginRight: 4},
+    legendLabel: {fontSize: 11, color: c.textPrimary, flex: 1},
+    legendPct: {fontSize: 11, color: c.textSecondary},
+    emptyText: {fontSize: 11, color: c.textLight, textAlign: 'center'},
+  });
+}
