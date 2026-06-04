@@ -67,6 +67,9 @@ export async function downloadAndInstallApk(
       downloadDest,
       'application/vnd.android.package-archive',
     );
+
+    // 安裝器開啟後刪除暫存 APK
+    ReactNativeBlobUtil.fs.unlink(downloadDest).catch(() => {});
   } catch (e: any) {
     throw new Error(e?.message ?? '下載失敗');
   }
