@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(git commit -m 'fix: 定期支出/預估收入新增刪除即時自動存檔 *)",
-      "Bash(git commit -m 'feat: 月結報表依年份展開收合，最舊追溯至 2026/01 *)"
+      "Bash(git commit -m 'feat: 月結報表依年份展開收合，最舊追溯至 2026/01 *)",
+      "PowerShell($env:JAVA_HOME = \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\"; $env:PATH += \";$env:JAVA_HOME\\\\bin\"; cd \"C:\\\\Users\\\\aegis\\\\OneDrive\\\\Desktop\\\\CODE\\\\book\\\\android\"; .\\\\gradlew.bat assembleRelease 2>&1 | Select-Object -Last 5)",
+      "Bash(git commit -m 'fix: 安裝觸發後自動刪除暫存 APK *)",
+      "Bash(git commit -m 'feat: 設定通知功能（間隔天數 + 提醒時間，預設每天晚上9點） *)"
     ]
   }
 }

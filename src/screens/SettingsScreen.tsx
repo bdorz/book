@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
+  Switch,
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,8 +21,26 @@ import {
   downloadAndInstallApk,
   CURRENT_VERSION,
 } from '../utils/updater';
+import {
+  getNotificationSettings,
+  saveNotificationSettings,
+  scheduleReminders,
+  cancelAllReminders,
+  requestNotificationPermission,
+  NotificationSettings,
+} from '../utils/notifications';
 
 type UpdateStatus = 'idle' | 'checking' | 'latest' | 'available' | 'downloading';
+
+const INTERVALS = [
+  {value: 1, label: '每天'},
+  {value: 2, label: '每2天'},
+  {value: 3, label: '每3天'},
+  {value: 7, label: '每週'},
+];
+
+const HOURS = Array.from({length: 24}, (_, i) => i);
+const MINUTES = [0, 15, 30, 45];
 
 // 細項列表元件
 interface FixedItemsListProps {
@@ -174,6 +193,9 @@ export default function SettingsScreen() {
   const [fixedExpenses, setFixedExpenses] = useState<FixedItem[]>([]);
   const [estimatedIncomes, setEstimatedIncomes] = useState<FixedItem[]>([]);
   const [saved, setSaved] = useState(false);
+  const [notifSettings, setNotifSettings] = useState<NotificationSettings>({
+    enabled: false, hour: 21, minute: 0, intervalDays: 1,
+  });
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [latestTag, setLatestTag] = useState('');
@@ -187,8 +209,36 @@ export default function SettingsScreen() {
         setFixedExpenses(s.fixed_expenses ?? []);
         setEstimatedIncomes(s.estimated_incomes ?? []);
       });
+      getNotificationSettings().then(setNotifSettings);
     }, []),
   );
+
+  const handleNotifToggle = async (enabled: boolean) => {
+    if (enabled) {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        Alert.alert('無法開啟通知', '請到手機設定中允許此 APP 發送通知');
+        return;
+      }
+    }
+    const updated = {...notifSettings, enabled};
+    setNotifSettings(updated);
+    await saveNotificationSettings(updated);
+    if (enabled) {
+      await scheduleReminders(updated);
+    } else {
+      await cancelAllReminders();
+    }
+  };
+
+  const handleNotifChange = async (changes: Partial<NotificationSettings>) => {
+    const updated = {...notifSettings, ...changes};
+    setNotifSettings(updated);
+    await saveNotificationSettings(updated);
+    if (updated.enabled) {
+      await scheduleReminders(updated);
+    }
+  };
 
   const handleSave = async () => {
     await saveSettings({
@@ -354,6 +404,71 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* Notifications */}
+      <View style={styles.section}>
+        <View style={styles.notifHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>記帳提醒通知</Text>
+            <Text style={styles.sectionHint}>提醒你每天記帳</Text>
+          </View>
+          <Switch
+            value={notifSettings.enabled}
+            onValueChange={handleNotifToggle}
+            trackColor={{false: Colors.border, true: Colors.primary + '80'}}
+            thumbColor={notifSettings.enabled ? Colors.primary : '#f0f0f0'}
+          />
+        </View>
+
+        {notifSettings.enabled && (
+          <View style={styles.notifBody}>
+            {/* 提醒時間 */}
+            <Text style={styles.notifLabel}>提醒時間</Text>
+            <View style={styles.timeRow}>
+              <TouchableOpacity
+                style={styles.timeBtn}
+                onPress={() => handleNotifChange({hour: (notifSettings.hour + 23) % 24})}>
+                <Icon name="chevron-left" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.timeDisplay}>
+                {String(notifSettings.hour).padStart(2, '0')}:
+                {String(notifSettings.minute).padStart(2, '0')}
+              </Text>
+              <TouchableOpacity
+                style={styles.timeBtn}
+                onPress={() => handleNotifChange({hour: (notifSettings.hour + 1) % 24})}>
+                <Icon name="chevron-right" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+              <View style={styles.minuteGap} />
+              {MINUTES.map(m => (
+                <TouchableOpacity
+                  key={m}
+                  style={[styles.minuteChip, notifSettings.minute === m && styles.minuteChipActive]}
+                  onPress={() => handleNotifChange({minute: m})}>
+                  <Text style={[styles.minuteChipText, notifSettings.minute === m && styles.minuteChipTextActive]}>
+                    :{String(m).padStart(2, '0')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* 提醒間隔 */}
+            <Text style={[styles.notifLabel, {marginTop: 12}]}>提醒間隔</Text>
+            <View style={styles.intervalRow}>
+              {INTERVALS.map(iv => (
+                <TouchableOpacity
+                  key={iv.value}
+                  style={[styles.intervalChip, notifSettings.intervalDays === iv.value && styles.intervalChipActive]}
+                  onPress={() => handleNotifChange({intervalDays: iv.value})}>
+                  <Text style={[styles.intervalChipText, notifSettings.intervalDays === iv.value && styles.intervalChipTextActive]}>
+                    {iv.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+      </View>
+
       {/* Save */}
       <TouchableOpacity
         style={[styles.saveBtn, saved && styles.savedBtn]}
@@ -469,4 +584,20 @@ const styles = StyleSheet.create({
   dangerTitle: {fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1},
   dangerBtn: {flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.expense + '10', borderRadius: 14, padding: 14, gap: 10, borderWidth: 1, borderColor: Colors.expense + '30'},
   dangerBtnText: {fontSize: 15, color: Colors.expense, fontWeight: '600'},
+  notifHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
+  notifBody: {marginTop: 16, gap: 4},
+  notifLabel: {fontSize: 12, fontWeight: '700', color: Colors.textSecondary, marginBottom: 6},
+  timeRow: {flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap'},
+  timeBtn: {padding: 4},
+  timeDisplay: {fontSize: 22, fontWeight: '800', color: Colors.primary, minWidth: 70, textAlign: 'center'},
+  minuteGap: {width: 8},
+  minuteChip: {paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border},
+  minuteChipActive: {backgroundColor: Colors.primary, borderColor: Colors.primary},
+  minuteChipText: {fontSize: 13, fontWeight: '600', color: Colors.textSecondary},
+  minuteChipTextActive: {color: '#fff'},
+  intervalRow: {flexDirection: 'row', gap: 8, flexWrap: 'wrap'},
+  intervalChip: {paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.background},
+  intervalChipActive: {backgroundColor: Colors.primary, borderColor: Colors.primary},
+  intervalChipText: {fontSize: 13, fontWeight: '600', color: Colors.textSecondary},
+  intervalChipTextActive: {color: '#fff'},
 });
