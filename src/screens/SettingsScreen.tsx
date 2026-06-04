@@ -201,17 +201,34 @@ export default function SettingsScreen() {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const autoSave = (fe: FixedItem[], ei: FixedItem[]) => {
+    saveSettings({
+      user_name: userName,
+      base_savings: parseFloat(baseSavings) || 0,
+      fixed_expenses: fe,
+      estimated_incomes: ei,
+    });
+  };
+
   const addFixedExpense = (name: string, amount: number) => {
-    setFixedExpenses(prev => [...prev, {id: `${Date.now()}`, name, amount}]);
+    const updated = [...fixedExpenses, {id: `${Date.now()}`, name, amount}];
+    setFixedExpenses(updated);
+    autoSave(updated, estimatedIncomes);
   };
   const deleteFixedExpense = (id: string) => {
-    setFixedExpenses(prev => prev.filter(i => i.id !== id));
+    const updated = fixedExpenses.filter(i => i.id !== id);
+    setFixedExpenses(updated);
+    autoSave(updated, estimatedIncomes);
   };
   const addEstimatedIncome = (name: string, amount: number) => {
-    setEstimatedIncomes(prev => [...prev, {id: `${Date.now()}`, name, amount}]);
+    const updated = [...estimatedIncomes, {id: `${Date.now()}`, name, amount}];
+    setEstimatedIncomes(updated);
+    autoSave(fixedExpenses, updated);
   };
   const deleteEstimatedIncome = (id: string) => {
-    setEstimatedIncomes(prev => prev.filter(i => i.id !== id));
+    const updated = estimatedIncomes.filter(i => i.id !== id);
+    setEstimatedIncomes(updated);
+    autoSave(fixedExpenses, updated);
   };
 
   const handleClearData = () => {
