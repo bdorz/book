@@ -72,11 +72,6 @@ export default function TransactionsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>全部記錄</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => navigation.navigate('AddEditTransaction', {initialType: 'expense'})}>
-          <Icon name="plus" size={22} color={Colors.primary} />
-        </TouchableOpacity>
       </View>
 
       {/* Summary */}
@@ -148,6 +143,14 @@ export default function TransactionsScreen() {
           }}
         />
       )}
+
+      {/* FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('AddEditTransaction', {initialType: 'expense'})}
+        activeOpacity={0.85}>
+        <Icon name="plus" size={28} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -169,6 +172,22 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   headerTitle: {fontSize: 20, fontWeight: '700', color: Colors.textPrimary},
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: Colors.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+  },
   addBtn: {
     width: 36,
     height: 36,

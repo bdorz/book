@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import HomeScreen from '../screens/HomeScreen';
 import TransactionsScreen from '../screens/TransactionsScreen';
 import FamilyScreen from '../screens/FamilyScreen';
+import MonthlyReportScreen from '../screens/MonthlyReportScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import {TabParamList} from '../types';
 import {Colors} from '../constants/colors';
@@ -20,11 +21,11 @@ export default function TabNavigator() {
         tabBarStyle: {
           elevation: 8,
           borderTopWidth: 0,
-          height: 60,
-          paddingBottom: 8,
+          height: 58,
+          paddingBottom: 6,
           paddingTop: 4,
         },
-        tabBarLabelStyle: {fontSize: 11, fontWeight: '600'},
+        tabBarLabelStyle: {fontSize: 10, fontWeight: '600'},
       }}>
       <Tab.Screen
         name="Home"
@@ -53,6 +54,16 @@ export default function TabNavigator() {
           tabBarLabel: '家人代買',
           tabBarIcon: ({color, size}) => (
             <Icon name="account-group" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="MonthlyReport"
+        component={MonthlyReportScreen}
+        options={{
+          tabBarLabel: '月結',
+          tabBarIcon: ({color, size}) => (
+            <Icon name="chart-bar" size={size} color={color} />
           ),
         }}
       />

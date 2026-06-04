@@ -24,6 +24,18 @@ export interface AppSettings {
   estimated_incomes: FixedItem[];
 }
 
+export interface MonthlyReport {
+  id: string;
+  year: number;
+  month: number;
+  opening_balance: number;
+  income: number;
+  cash_expense: number;
+  credit_expense: number;
+  closing_balance: number;
+  created_at: string;
+}
+
 export type RootStackParamList = {
   MainTabs: undefined;
   AddEditTransaction: {
@@ -36,5 +48,6 @@ export type TabParamList = {
   Home: undefined;
   Transactions: undefined;
   Family: undefined;
+  MonthlyReport: undefined;
   Settings: undefined;
 };

@@ -57,11 +57,6 @@ export default function FamilyScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>家人代買</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => navigation.navigate('AddEditTransaction', {initialType: 'family_out'})}>
-          <Icon name="plus" size={22} color={Colors.family} />
-        </TouchableOpacity>
       </View>
 
       {/* Summary Cards */}
@@ -144,6 +139,14 @@ export default function FamilyScreen() {
           }}
         />
       )}
+
+      {/* FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('AddEditTransaction', {initialType: 'family_out'})}
+        activeOpacity={0.85}>
+        <Icon name="plus" size={28} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -224,4 +227,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   emptyAddBtnText: {color: '#fff', fontSize: 15, fontWeight: '600'},
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.family,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: Colors.family,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+  },
 });

@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {Transaction, AppSettings, TransactionType} from '../types';
+import {Transaction, AppSettings, TransactionType, MonthlyReport} from '../types';
 
 const TRANSACTIONS_KEY = '@book_transactions';
 const SETTINGS_KEY = '@book_settings';
+const REPORTS_KEY = '@book_monthly_reports';
 
 export const defaultSettings: AppSettings = {
   base_savings: 0,
@@ -110,4 +111,41 @@ export async function getSettings(): Promise<AppSettings> {
 
 export async function saveSettings(settings: AppSettings): Promise<void> {
   await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+// ── 月結報表 ──────────────────────────────────────────────
+
+export async function getAllMonthlyReports(): Promise<MonthlyReport[]> {
+  try {
+    const data = await AsyncStorage.getItem(REPORTS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getMonthlyReport(
+  year: number,
+  month: number,
+): Promise<MonthlyReport | null> {
+  const all = await getAllMonthlyReports();
+  return all.find(r => r.year === year && r.month === month) ?? null;
+}
+
+export async function saveMonthlyReport(
+  report: Omit<MonthlyReport, 'id' | 'created_at'>,
+): Promise<void> {
+  const all = await getAllMonthlyReports();
+  const existing = all.findIndex(r => r.year === report.year && r.month === report.month);
+  const full: MonthlyReport = {
+    ...report,
+    id: `${report.year}-${String(report.month).padStart(2, '0')}`,
+    created_at: new Date().toISOString(),
+  };
+  if (existing >= 0) {
+    all[existing] = full;
+  } else {
+    all.push(full);
+  }
+  await AsyncStorage.setItem(REPORTS_KEY, JSON.stringify(all));
 }
