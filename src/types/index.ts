@@ -11,11 +11,17 @@ export interface Transaction {
   updated_at: string;
 }
 
+export interface FixedItem {
+  id: string;
+  name: string;
+  amount: number;
+}
+
 export interface AppSettings {
   base_savings: number;
   user_name: string;
-  fixed_expense: number;
-  estimated_income: number;
+  fixed_expenses: FixedItem[];
+  estimated_incomes: FixedItem[];
 }
 
 export type RootStackParamList = {

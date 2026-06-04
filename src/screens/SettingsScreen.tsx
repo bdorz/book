@@ -12,6 +12,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {Colors} from '../constants/colors';
+import {FixedItem} from '../types';
 import {getSettings, saveSettings} from '../storage/database';
 import {
   fetchLatestRelease,
@@ -20,78 +21,158 @@ import {
   CURRENT_VERSION,
 } from '../utils/updater';
 
-interface AmountRowProps {
+type UpdateStatus = 'idle' | 'checking' | 'latest' | 'available' | 'downloading';
+
+// 細項列表元件
+interface FixedItemsListProps {
+  title: string;
   icon: string;
-  label: string;
-  hint: string;
-  value: string;
-  onChange: (v: string) => void;
-  color?: string;
+  color: string;
+  items: FixedItem[];
+  onAdd: (name: string, amount: number) => void;
+  onDelete: (id: string) => void;
 }
 
-function AmountRow({icon, label, hint, value, onChange, color}: AmountRowProps) {
+function FixedItemsList({title, icon, color, items, onAdd, onDelete}: FixedItemsListProps) {
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newAmount, setNewAmount] = useState('');
+
+  const total = items.reduce((s, i) => s + i.amount, 0);
+
+  const handleAdd = () => {
+    const amt = parseFloat(newAmount);
+    if (!newName.trim()) {Alert.alert('請輸入項目名稱'); return;}
+    if (!newAmount || isNaN(amt) || amt <= 0) {Alert.alert('請輸入有效金額'); return;}
+    onAdd(newName.trim(), amt);
+    setNewName('');
+    setNewAmount('');
+    setAdding(false);
+  };
+
   return (
-    <View style={rowStyles.wrap}>
-      <View style={[rowStyles.iconWrap, {backgroundColor: (color ?? Colors.primary) + '18'}]}>
-        <Icon name={icon} size={18} color={color ?? Colors.primary} />
+    <View style={listStyles.wrap}>
+      <View style={listStyles.header}>
+        <View style={[listStyles.iconWrap, {backgroundColor: color + '18'}]}>
+          <Icon name={icon} size={16} color={color} />
+        </View>
+        <Text style={listStyles.title}>{title}</Text>
+        <Text style={[listStyles.total, {color}]}>
+          NT${total.toLocaleString()}
+        </Text>
       </View>
-      <View style={rowStyles.labelWrap}>
-        <Text style={rowStyles.label}>{label}</Text>
-        <Text style={rowStyles.hint}>{hint}</Text>
-      </View>
-      <View style={rowStyles.inputWrap}>
-        <Text style={[rowStyles.currency, {color: color ?? Colors.primary}]}>NT$</Text>
-        <TextInput
-          style={[rowStyles.input, {color: color ?? Colors.primary}]}
-          value={value}
-          onChangeText={onChange}
-          placeholder="0"
-          placeholderTextColor={Colors.textLight}
-          keyboardType="numeric"
-          returnKeyType="done"
-        />
-      </View>
+
+      {items.map(item => (
+        <View key={item.id} style={listStyles.item}>
+          <Text style={listStyles.itemName}>{item.name}</Text>
+          <Text style={[listStyles.itemAmount, {color}]}>
+            NT${item.amount.toLocaleString()}
+          </Text>
+          <TouchableOpacity onPress={() => onDelete(item.id)} style={listStyles.deleteBtn}>
+            <Icon name="close-circle" size={18} color={Colors.textLight} />
+          </TouchableOpacity>
+        </View>
+      ))}
+
+      {adding ? (
+        <View style={listStyles.addForm}>
+          <TextInput
+            style={listStyles.nameInput}
+            value={newName}
+            onChangeText={setNewName}
+            placeholder="項目名稱（如：房租）"
+            placeholderTextColor={Colors.textLight}
+            autoFocus
+          />
+          <View style={listStyles.amountRow}>
+            <Text style={[listStyles.currency, {color}]}>NT$</Text>
+            <TextInput
+              style={[listStyles.amountInput, {color}]}
+              value={newAmount}
+              onChangeText={setNewAmount}
+              placeholder="0"
+              placeholderTextColor={Colors.textLight}
+              keyboardType="numeric"
+              returnKeyType="done"
+            />
+          </View>
+          <View style={listStyles.formBtns}>
+            <TouchableOpacity style={[listStyles.confirmBtn, {backgroundColor: color}]} onPress={handleAdd}>
+              <Text style={listStyles.confirmText}>確認</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={listStyles.cancelBtn} onPress={() => {setAdding(false); setNewName(''); setNewAmount('');}}>
+              <Text style={listStyles.cancelText}>取消</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <TouchableOpacity style={[listStyles.addBtn, {borderColor: color + '40'}]} onPress={() => setAdding(true)}>
+          <Icon name="plus" size={14} color={color} />
+          <Text style={[listStyles.addBtnText, {color}]}>新增項目</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
-const rowStyles = StyleSheet.create({
-  wrap: {
+const listStyles = StyleSheet.create({
+  wrap: {marginTop: 12},
+  header: {flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8},
+  iconWrap: {width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center'},
+  title: {flex: 1, fontSize: 13, fontWeight: '700', color: Colors.textPrimary},
+  total: {fontSize: 14, fontWeight: '800'},
+  item: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    gap: 12,
   },
-  iconWrap: {
-    width: 36,
-    height: 36,
+  itemName: {flex: 1, fontSize: 14, color: Colors.textPrimary},
+  itemAmount: {fontSize: 14, fontWeight: '600', marginRight: 8},
+  deleteBtn: {padding: 2},
+  addForm: {
+    backgroundColor: Colors.background,
     borderRadius: 10,
+    padding: 12,
+    marginTop: 6,
+    gap: 8,
+  },
+  nameInput: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    paddingVertical: 6,
+  },
+  amountRow: {flexDirection: 'row', alignItems: 'center', gap: 4},
+  currency: {fontSize: 14, fontWeight: '700'},
+  amountInput: {flex: 1, fontSize: 20, fontWeight: '700', padding: 0},
+  formBtns: {flexDirection: 'row', gap: 8, marginTop: 4},
+  confirmBtn: {flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center'},
+  confirmText: {color: '#fff', fontSize: 14, fontWeight: '700'},
+  cancelBtn: {flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center', backgroundColor: Colors.border},
+  cancelText: {color: Colors.textSecondary, fontSize: 14, fontWeight: '600'},
+  addBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    marginTop: 6,
+    gap: 4,
   },
-  labelWrap: {flex: 1},
-  label: {fontSize: 14, fontWeight: '600', color: Colors.textPrimary},
-  hint: {fontSize: 11, color: Colors.textSecondary, marginTop: 2},
-  inputWrap: {flexDirection: 'row', alignItems: 'center', gap: 2},
-  currency: {fontSize: 13, fontWeight: '700'},
-  input: {
-    fontSize: 18,
-    fontWeight: '700',
-    minWidth: 80,
-    textAlign: 'right',
-    padding: 0,
-  },
+  addBtnText: {fontSize: 13, fontWeight: '600'},
 });
-
-type UpdateStatus = 'idle' | 'checking' | 'latest' | 'available' | 'downloading';
 
 export default function SettingsScreen() {
   const [userName, setUserName] = useState('');
   const [baseSavings, setBaseSavings] = useState('');
-  const [fixedExpense, setFixedExpense] = useState('');
-  const [estimatedIncome, setEstimatedIncome] = useState('');
+  const [fixedExpenses, setFixedExpenses] = useState<FixedItem[]>([]);
+  const [estimatedIncomes, setEstimatedIncomes] = useState<FixedItem[]>([]);
   const [saved, setSaved] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -103,8 +184,8 @@ export default function SettingsScreen() {
       getSettings().then(s => {
         setUserName(s.user_name);
         setBaseSavings(String(s.base_savings || 0));
-        setFixedExpense(String(s.fixed_expense || 0));
-        setEstimatedIncome(String(s.estimated_income || 0));
+        setFixedExpenses(s.fixed_expenses ?? []);
+        setEstimatedIncomes(s.estimated_incomes ?? []);
       });
     }, []),
   );
@@ -113,29 +194,38 @@ export default function SettingsScreen() {
     await saveSettings({
       user_name: userName,
       base_savings: parseFloat(baseSavings) || 0,
-      fixed_expense: parseFloat(fixedExpense) || 0,
-      estimated_income: parseFloat(estimatedIncome) || 0,
+      fixed_expenses: fixedExpenses,
+      estimated_incomes: estimatedIncomes,
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const addFixedExpense = (name: string, amount: number) => {
+    setFixedExpenses(prev => [...prev, {id: `${Date.now()}`, name, amount}]);
+  };
+  const deleteFixedExpense = (id: string) => {
+    setFixedExpenses(prev => prev.filter(i => i.id !== id));
+  };
+  const addEstimatedIncome = (name: string, amount: number) => {
+    setEstimatedIncomes(prev => [...prev, {id: `${Date.now()}`, name, amount}]);
+  };
+  const deleteEstimatedIncome = (id: string) => {
+    setEstimatedIncomes(prev => prev.filter(i => i.id !== id));
+  };
+
   const handleClearData = () => {
-    Alert.alert(
-      '清除所有資料',
-      '確定要清除所有交易記錄嗎？此操作無法復原。',
-      [
-        {text: '取消', style: 'cancel'},
-        {
-          text: '確認清除',
-          style: 'destructive',
-          onPress: async () => {
-            await AsyncStorage.removeItem('@book_transactions');
-            Alert.alert('完成', '所有記錄已清除');
-          },
+    Alert.alert('清除所有資料', '確定要清除所有交易記錄嗎？此操作無法復原。', [
+      {text: '取消', style: 'cancel'},
+      {
+        text: '確認清除',
+        style: 'destructive',
+        onPress: async () => {
+          await AsyncStorage.removeItem('@book_transactions');
+          Alert.alert('完成', '所有記錄已清除');
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const handleCheckUpdate = async () => {
@@ -157,7 +247,7 @@ export default function SettingsScreen() {
         setTimeout(() => setUpdateStatus('idle'), 3000);
       }
     } catch (e: any) {
-      Alert.alert('檢查失敗', e?.message ?? '無法連線到 GitHub，請確認網路或 repo 設定');
+      Alert.alert('檢查失敗', e?.message ?? '無法連線到 GitHub');
       setUpdateStatus('idle');
     }
   };
@@ -174,7 +264,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.root} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {/* Header */}
       <View style={styles.headerBg}>
         <Icon name="cog" size={40} color="rgba(255,255,255,0.3)" />
@@ -197,39 +287,45 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      {/* Monthly Fixed Settings */}
+      {/* Fixed Items */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>每月固定金額</Text>
-        <Text style={styles.sectionHint}>設定後顯示於首頁統計卡，不影響實際交易記錄</Text>
-        <AmountRow
+        <Text style={styles.sectionHint}>設定後顯示於首頁統計卡總額</Text>
+        <FixedItemsList
+          title="定期支出"
           icon="cash-minus"
-          label="定期支出"
-          hint="每月固定支出（房租、電話費等）"
-          value={fixedExpense}
-          onChange={setFixedExpense}
           color={Colors.expense}
+          items={fixedExpenses}
+          onAdd={addFixedExpense}
+          onDelete={deleteFixedExpense}
         />
-        <AmountRow
+        <View style={styles.divider} />
+        <FixedItemsList
+          title="預估收入"
           icon="cash-plus"
-          label="預估收入"
-          hint="每月預期薪資或固定收入"
-          value={estimatedIncome}
-          onChange={setEstimatedIncome}
           color={Colors.income}
+          items={estimatedIncomes}
+          onAdd={addEstimatedIncome}
+          onDelete={deleteEstimatedIncome}
         />
       </View>
 
       {/* Savings */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>存款設定</Text>
-        <AmountRow
-          icon="piggy-bank-outline"
-          label="存款基準"
-          hint="計算「當前存款」的初始金額"
-          value={baseSavings}
-          onChange={setBaseSavings}
-          color={Colors.primary}
-        />
+        <Text style={styles.sectionTitle}>存款基準</Text>
+        <Text style={styles.sectionHint}>計算「當前存款」的初始金額</Text>
+        <View style={styles.savingsRow}>
+          <Text style={styles.currency}>NT$</Text>
+          <TextInput
+            style={styles.savingsInput}
+            value={baseSavings}
+            onChangeText={setBaseSavings}
+            placeholder="0"
+            placeholderTextColor={Colors.textLight}
+            keyboardType="numeric"
+            returnKeyType="done"
+          />
+        </View>
       </View>
 
       {/* Formula */}
@@ -237,9 +333,7 @@ export default function SettingsScreen() {
         <Icon name="information-outline" size={16} color={Colors.primary} />
         <View style={styles.formulaContent}>
           <Text style={styles.formulaTitle}>存款計算公式</Text>
-          <Text style={styles.formulaText}>
-            當前存款 = 存款基準 + 實際收入 − 實際支出 − 刷卡
-          </Text>
+          <Text style={styles.formulaText}>當前存款 = 存款基準 + 累積收入 − 累積支出 − 累積刷卡</Text>
         </View>
       </View>
 
@@ -252,28 +346,21 @@ export default function SettingsScreen() {
         <Text style={styles.saveBtnText}>{saved ? '已儲存！' : '儲存設定'}</Text>
       </TouchableOpacity>
 
-      {/* APP Update */}
+      {/* Update */}
       <View style={styles.section}>
         <View style={styles.updateHeader}>
           <View>
             <Text style={styles.sectionTitle}>APP 更新</Text>
             <Text style={styles.sectionHint}>目前版本 v{CURRENT_VERSION}</Text>
           </View>
-          {latestTag && updateStatus !== 'idle' && (
-            <View style={[
-              styles.versionBadge,
-              {backgroundColor: updateStatus === 'available' ? Colors.expense + '18' : Colors.income + '18'},
-            ]}>
-              <Text style={[
-                styles.versionBadgeText,
-                {color: updateStatus === 'available' ? Colors.expense : Colors.income},
-              ]}>
+          {latestTag !== '' && updateStatus !== 'idle' && (
+            <View style={[styles.versionBadge, {backgroundColor: updateStatus === 'available' ? Colors.expense + '18' : Colors.income + '18'}]}>
+              <Text style={[styles.versionBadgeText, {color: updateStatus === 'available' ? Colors.expense : Colors.income}]}>
                 {updateStatus === 'available' ? `v${latestTag} 可更新` : '已是最新'}
               </Text>
             </View>
           )}
         </View>
-
         {updateStatus === 'downloading' ? (
           <View style={styles.progressWrap}>
             <View style={styles.progressBg}>
@@ -287,16 +374,8 @@ export default function SettingsScreen() {
             <Text style={styles.downloadBtnText}>下載並安裝 v{latestTag}</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity
-            style={styles.checkBtn}
-            onPress={handleCheckUpdate}
-            disabled={updateStatus === 'checking'}
-            activeOpacity={0.8}>
-            <Icon
-              name={updateStatus === 'checking' ? 'loading' : updateStatus === 'latest' ? 'check-circle' : 'cloud-download-outline'}
-              size={18}
-              color={updateStatus === 'latest' ? Colors.income : Colors.primary}
-            />
+          <TouchableOpacity style={styles.checkBtn} onPress={handleCheckUpdate} disabled={updateStatus === 'checking'} activeOpacity={0.8}>
+            <Icon name={updateStatus === 'latest' ? 'check-circle' : 'cloud-download-outline'} size={18} color={updateStatus === 'latest' ? Colors.income : Colors.primary} />
             <Text style={[styles.checkBtnText, updateStatus === 'latest' && {color: Colors.income}]}>
               {updateStatus === 'checking' ? '檢查中...' : updateStatus === 'latest' ? '已是最新版本' : '檢查更新'}
             </Text>
@@ -345,112 +424,32 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {fontSize: 14, fontWeight: '700', color: Colors.textPrimary, marginBottom: 2},
   sectionHint: {fontSize: 11, color: Colors.textSecondary, marginBottom: 4},
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  nameInput: {
-    flex: 1,
-    fontSize: 16,
-    color: Colors.textPrimary,
-    paddingVertical: 2,
-  },
-  formulaCard: {
-    flexDirection: 'row',
-    backgroundColor: Colors.primary + '10',
-    marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 12,
-    padding: 14,
-    gap: 10,
-    alignItems: 'flex-start',
-  },
+  divider: {height: 1, backgroundColor: Colors.border, marginVertical: 16},
+  nameRow: {flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Colors.border, paddingVertical: 10, gap: 8},
+  nameInput: {flex: 1, fontSize: 16, color: Colors.textPrimary, paddingVertical: 2},
+  savingsRow: {flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 8},
+  currency: {fontSize: 16, fontWeight: '700', color: Colors.primary},
+  savingsInput: {flex: 1, fontSize: 24, fontWeight: '700', color: Colors.primary, padding: 0},
+  formulaCard: {flexDirection: 'row', backgroundColor: Colors.primary + '10', marginHorizontal: 16, marginTop: 12, borderRadius: 12, padding: 14, gap: 10, alignItems: 'flex-start'},
   formulaContent: {flex: 1},
   formulaTitle: {fontSize: 13, fontWeight: '700', color: Colors.primary, marginBottom: 4},
   formulaText: {fontSize: 12, color: Colors.primary, lineHeight: 18},
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    marginHorizontal: 16,
-    marginTop: 20,
-    paddingVertical: 16,
-    borderRadius: 16,
-    gap: 8,
-  },
+  saveBtn: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary, marginHorizontal: 16, marginTop: 20, paddingVertical: 16, borderRadius: 16, gap: 8},
   savedBtn: {backgroundColor: Colors.income},
   saveBtnText: {color: '#fff', fontSize: 16, fontWeight: '700'},
-  dangerSection: {marginHorizontal: 16, marginTop: 24},
-  dangerTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  dangerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.expense + '10',
-    borderRadius: 14,
-    padding: 14,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: Colors.expense + '30',
-  },
-  dangerBtnText: {fontSize: 15, color: Colors.expense, fontWeight: '600'},
-  updateHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  versionBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
+  updateHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12},
+  versionBadge: {paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20},
   versionBadgeText: {fontSize: 12, fontWeight: '700'},
   progressWrap: {gap: 6},
-  progressBg: {
-    height: 8,
-    backgroundColor: Colors.border,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: Colors.primary,
-    borderRadius: 4,
-    minWidth: 4,
-  },
+  progressBg: {height: 8, backgroundColor: Colors.border, borderRadius: 4, overflow: 'hidden'},
+  progressFill: {height: '100%', backgroundColor: Colors.primary, borderRadius: 4, minWidth: 4},
   progressText: {fontSize: 12, color: Colors.textSecondary, textAlign: 'center'},
-  downloadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.expense,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
-  },
+  downloadBtn: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.expense, paddingVertical: 12, borderRadius: 12, gap: 8},
   downloadBtnText: {color: '#fff', fontSize: 15, fontWeight: '700'},
-  checkBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary + '10',
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: Colors.primary + '30',
-  },
+  checkBtn: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary + '10', paddingVertical: 12, borderRadius: 12, gap: 8, borderWidth: 1, borderColor: Colors.primary + '30'},
   checkBtnText: {fontSize: 15, fontWeight: '700', color: Colors.primary},
+  dangerSection: {marginHorizontal: 16, marginTop: 24},
+  dangerTitle: {fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1},
+  dangerBtn: {flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.expense + '10', borderRadius: 14, padding: 14, gap: 10, borderWidth: 1, borderColor: Colors.expense + '30'},
+  dangerBtnText: {fontSize: 15, color: Colors.expense, fontWeight: '600'},
 });

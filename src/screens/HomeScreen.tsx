@@ -63,6 +63,7 @@ export default function HomeScreen() {
   const [estimatedIncome, setEstimatedIncome] = useState(0);
   const [userName, setUserName] = useState('');
 
+
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -81,8 +82,8 @@ export default function HomeScreen() {
       });
       getSettings().then(s => {
         setBaseSavings(s.base_savings);
-        setFixedExpense(s.fixed_expense);
-        setEstimatedIncome(s.estimated_income);
+        setFixedExpense(s.fixed_expenses.reduce((sum, i) => sum + i.amount, 0));
+        setEstimatedIncome(s.estimated_incomes.reduce((sum, i) => sum + i.amount, 0));
         setUserName(s.user_name);
       });
     }, [month, year]),
@@ -164,7 +165,7 @@ export default function HomeScreen() {
             <StatCard title="預估收入" amount={estimatedIncome} icon="trending-up" color={Colors.income} />
           </View>
           <View style={styles.statsRow}>
-            <StatCard title="中信刷卡" amount={creditCard} icon="credit-card-outline" color={Colors.creditCard} />
+            <StatCard title="刷卡" amount={creditCard} icon="credit-card-outline" color={Colors.creditCard} />
             <StatCard title="現金手存" amount={cashBalance} icon="cash" color={cashBalance >= 0 ? Colors.income : Colors.expense} />
           </View>
         </View>

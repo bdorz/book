@@ -7,8 +7,8 @@ const SETTINGS_KEY = '@book_settings';
 export const defaultSettings: AppSettings = {
   base_savings: 0,
   user_name: '使用者',
-  fixed_expense: 0,
-  estimated_income: 0,
+  fixed_expenses: [],
+  estimated_incomes: [],
 };
 
 function generateId(): string {
@@ -89,7 +89,20 @@ export async function getTransactionById(
 export async function getSettings(): Promise<AppSettings> {
   try {
     const data = await AsyncStorage.getItem(SETTINGS_KEY);
-    return data ? {...defaultSettings, ...JSON.parse(data)} : defaultSettings;
+    if (!data) {return defaultSettings;}
+    const parsed = JSON.parse(data);
+    // 相容舊版單一數值格式
+    if (typeof parsed.fixed_expense === 'number' && !parsed.fixed_expenses) {
+      parsed.fixed_expenses = parsed.fixed_expense > 0
+        ? [{id: 'legacy_fe', name: '固定支出', amount: parsed.fixed_expense}]
+        : [];
+    }
+    if (typeof parsed.estimated_income === 'number' && !parsed.estimated_incomes) {
+      parsed.estimated_incomes = parsed.estimated_income > 0
+        ? [{id: 'legacy_ei', name: '預估收入', amount: parsed.estimated_income}]
+        : [];
+    }
+    return {...defaultSettings, ...parsed};
   } catch {
     return defaultSettings;
   }

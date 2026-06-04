@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  KeyboardAvoidingView,
   Alert,
   Platform,
 } from 'react-native';
@@ -170,7 +171,11 @@ export default function AddEditTransactionScreen() {
         )}
       </View>
 
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}>
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
         {/* Type Tabs */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeTabs} contentContainerStyle={styles.typeTabsContent}>
           {TYPE_TABS.map(tab => (
@@ -271,14 +276,17 @@ export default function AddEditTransactionScreen() {
           </Text>
         </TouchableOpacity>
 
-        <View style={{height: 40}} />
+        <View style={{height: 80}} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {flex: 1, backgroundColor: Colors.background},
+  flex: {flex: 1},
+  scrollContent: {paddingBottom: 20},
   header: {
     flexDirection: 'row',
     alignItems: 'center',
