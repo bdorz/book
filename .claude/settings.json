@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m 'fix: 定期支出/預估收入新增刪除即時自動存檔 *)",
+      "Bash(git commit -m 'feat: 月結報表依年份展開收合，最舊追溯至 2026/01 *)"
+    ]
+  }
+}

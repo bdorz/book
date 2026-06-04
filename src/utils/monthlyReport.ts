@@ -36,16 +36,17 @@ export async function autoGenerateMissingReports(): Promise<void> {
   // 從 2025/1 或最早交易月份開始，補到上個月
   const target = prevMonth(curYear, curMonth);
 
-  // 往回最多補 24 個月
+  // 從 2026/01 補到上個月
+  const START_YEAR = 2026;
+  const START_MONTH = 1;
   const months: {year: number; month: number}[] = [];
   let y = target.year;
   let m = target.month;
-  for (let i = 0; i < 24; i++) {
+  while (y > START_YEAR || (y === START_YEAR && m >= START_MONTH)) {
     months.unshift({year: y, month: m});
     const p = prevMonth(y, m);
     y = p.year;
     m = p.month;
-    if (y < curYear - 2) {break;}
   }
 
   for (const {year, month} of months) {
