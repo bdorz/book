@@ -3,8 +3,12 @@ import {View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, 
 import {useFocusEffect} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useColors, useTheme, AppColors} from '../context/ThemeContext';
+import {RootStackParamList} from '../types';
 import {FixedItem} from '../types';
+type SettingsNavProp = NativeStackNavigationProp<RootStackParamList>;
 import {getSettings, saveSettings} from '../storage/database';
 import {fetchLatestRelease, hasNewVersion, downloadAndInstallApk, CURRENT_VERSION} from '../utils/updater';
 import {getNotificationSettings, saveNotificationSettings, scheduleReminders, cancelAllReminders, requestNotificationPermission, NotificationSettings} from '../utils/notifications';
@@ -115,6 +119,7 @@ function createListStyles(c: AppColors) {
 }
 
 export default function SettingsScreen() {
+  const navigation = useNavigation<SettingsNavProp>();
   const colors = useColors();
   const {isDark, toggleTheme} = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -221,6 +226,20 @@ export default function SettingsScreen() {
           <Switch value={isDark} onValueChange={toggleTheme} trackColor={{false: colors.border, true: colors.primary + '80'}} thumbColor={isDark ? colors.primary : '#f0f0f0'} />
         </View>
       </View>
+
+      {/* 匯率換算 */}
+      <TouchableOpacity style={styles.section} onPress={() => navigation.navigate('Currency')} activeOpacity={0.8}>
+        <View style={styles.navRow}>
+          <View style={[styles.navIconWrap, {backgroundColor: colors.creditCard + '18'}]}>
+            <Icon name="currency-usd" size={20} color={colors.creditCard} />
+          </View>
+          <View style={styles.navContent}>
+            <Text style={styles.sectionTitle}>即時匯率換算</Text>
+            <Text style={styles.sectionHint}>美元、日圓｜國泰世華銀行即期賣出</Text>
+          </View>
+          <Icon name="chevron-right" size={20} color={colors.textLight} />
+        </View>
+      </TouchableOpacity>
 
       {/* 個人資料 */}
       <View style={styles.section}>
@@ -405,5 +424,8 @@ function createStyles(c: AppColors) {
     dangerTitle: {fontSize: 13, fontWeight: '700', color: c.textSecondary, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1},
     dangerBtn: {flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 14, gap: 10, borderWidth: 1},
     dangerBtnText: {fontSize: 15, fontWeight: '600'},
+    navRow: {flexDirection: 'row', alignItems: 'center', gap: 12},
+    navIconWrap: {width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center'},
+    navContent: {flex: 1},
   });
 }

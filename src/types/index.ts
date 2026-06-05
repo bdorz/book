@@ -42,6 +42,7 @@ export type RootStackParamList = {
     transactionId?: string;
     initialType?: TransactionType;
   };
+  Currency: undefined;
 };
 
 export type TabParamList = {

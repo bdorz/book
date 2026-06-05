@@ -6,6 +6,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {ThemeProvider, useTheme} from './src/context/ThemeContext';
 import TabNavigator from './src/navigation/TabNavigator';
 import AddEditTransactionScreen from './src/screens/AddEditTransactionScreen';
+import CurrencyScreen from './src/screens/CurrencyScreen';
 import {RootStackParamList} from './src/types';
 import {replenishRemindersIfNeeded} from './src/utils/notifications';
 
@@ -35,6 +36,11 @@ function AppInner() {
             name="AddEditTransaction"
             component={AddEditTransactionScreen}
             options={{presentation: 'modal', animation: 'slide_from_bottom'}}
+          />
+          <Stack.Screen
+            name="Currency"
+            component={CurrencyScreen}
+            options={{animation: 'slide_from_right'}}
           />
         </Stack.Navigator>
       </NavigationContainer>
