@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo, useCallback} from 'react';
+import React, {useState, useEffect, useMemo, useCallback, useRef} from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,12 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useColors, AppColors} from '../context/ThemeContext';
 import {fetchCathayRates, RateData} from '../utils/currencyFetch';
 
-type CalcMode = 'twd_to_foreign' | 'foreign_to_twd';
-
 export default function CurrencyScreen() {
   const navigation = useNavigation();
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const scrollRef = useRef<ScrollView>(null);
 
   const [rates, setRates] = useState<RateData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,6 +26,12 @@ export default function CurrencyScreen() {
   const [twdInput, setTwdInput] = useState('');
   const [usdInput, setUsdInput] = useState('');
   const [jpyInput, setJpyInput] = useState('');
+
+  const clearAll = useCallback(() => {
+    setTwdInput('');
+    setUsdInput('');
+    setJpyInput('');
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,7 +101,7 @@ export default function CurrencyScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} style={styles.scroll} keyboardShouldPersistTaps="handled">
         {/* Source info */}
         <View style={styles.sourceRow}>
           <Icon name="bank" size={14} color={colors.textSecondary} />
@@ -165,6 +171,7 @@ export default function CurrencyScreen() {
                     style={styles.input}
                     value={twdInput}
                     onChangeText={handleTwdChange}
+                    onFocus={clearAll}
                     keyboardType="numeric"
                     placeholder="0"
                     placeholderTextColor={colors.textLight}
@@ -181,6 +188,7 @@ export default function CurrencyScreen() {
                     style={styles.input}
                     value={usdInput}
                     onChangeText={handleUsdChange}
+                    onFocus={clearAll}
                     keyboardType="numeric"
                     placeholder="0.00"
                     placeholderTextColor={colors.textLight}
@@ -197,6 +205,10 @@ export default function CurrencyScreen() {
                     style={styles.input}
                     value={jpyInput}
                     onChangeText={handleJpyChange}
+                    onFocus={() => {
+                      clearAll();
+                      setTimeout(() => scrollRef.current?.scrollToEnd({animated: true}), 100);
+                    }}
                     keyboardType="numeric"
                     placeholder="0"
                     placeholderTextColor={colors.textLight}
@@ -207,7 +219,7 @@ export default function CurrencyScreen() {
           </>
         ) : null}
 
-        <View style={{height: 40}} />
+        <View style={{height: 300}} />
       </ScrollView>
     </View>
   );
