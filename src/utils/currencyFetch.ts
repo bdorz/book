@@ -54,7 +54,10 @@ export async function fetchCathayRates(): Promise<RateData> {
     return {usdSell, jpySell, updatedAt: new Date().toLocaleTimeString('zh-TW')};
   }
 
-  throw new Error(
-    `解析失敗 (HTML ${htmlLen}字, USD.svg:${hasSvg}, 即期:${hasSpot}, USD:${usdSell}, JPY:${jpySell})`,
-  );
+  // 輸出 USD 附近片段供診斷
+  const svgIdx = html.indexOf('/USD.svg');
+  const spotIdx = svgIdx >= 0 ? html.indexOf('即期匯率', svgIdx) : -1;
+  const snippet = spotIdx >= 0 ? html.slice(spotIdx, spotIdx + 200).replace(/\s+/g, ' ') : 'N/A';
+
+  throw new Error(`解析失敗\nHTML:${htmlLen} svg:${hasSvg} 即期:${hasSpot}\n片段:${snippet}`);
 }
