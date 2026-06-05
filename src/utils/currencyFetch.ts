@@ -30,12 +30,22 @@ function findRateInHtml(html: string, code: string): number {
 }
 
 export async function fetchCathayRates(): Promise<RateData> {
-  const r = await fetch(
-    'https://www.cathaybk.com.tw/cathaybk/personal/product/deposit/currency-billboard/',
-    {headers: HEADERS},
-  );
-  if (!r.ok) {throw new Error(`HTTP ${r.status}`);}
+  let r: Response;
+  try {
+    r = await fetch(
+      'https://www.cathaybk.com.tw/cathaybk/personal/product/deposit/currency-billboard/',
+      {headers: HEADERS},
+    );
+  } catch (e: any) {
+    throw new Error(`網路錯誤: ${e?.message}`);
+  }
+
+  if (!r.ok) {throw new Error(`伺服器回應 HTTP ${r.status}`);}
+
   const html = await r.text();
+  const htmlLen = html.length;
+  const hasSvg = html.includes('/USD.svg');
+  const hasSpot = html.includes('即期匯率');
 
   const usdSell = findRateInHtml(html, 'USD');
   const jpySell = findRateInHtml(html, 'JPY');
@@ -44,5 +54,7 @@ export async function fetchCathayRates(): Promise<RateData> {
     return {usdSell, jpySell, updatedAt: new Date().toLocaleTimeString('zh-TW')};
   }
 
-  throw new Error('無法取得匯率，請確認網路連線後再試');
+  throw new Error(
+    `解析失敗 (HTML ${htmlLen}字, USD.svg:${hasSvg}, 即期:${hasSpot}, USD:${usdSell}, JPY:${jpySell})`,
+  );
 }
