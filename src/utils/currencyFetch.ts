@@ -20,7 +20,7 @@ function findRateInHtml(html: string, code: string): number {
   const spotIdx = html.indexOf('即期匯率', svgIdx);
   if (spotIdx === -1) {return 0;}
 
-  const snippet = html.slice(spotIdx, spotIdx + 300);
+  const snippet = html.slice(spotIdx, spotIdx + 1000);
   const nums = [...snippet.matchAll(/>(\d+\.?\d*)</g)]
     .map(m => parseFloat(m[1]))
     .filter(n => n > 0);
@@ -43,10 +43,6 @@ export async function fetchCathayRates(): Promise<RateData> {
   if (!r.ok) {throw new Error(`伺服器回應 HTTP ${r.status}`);}
 
   const html = await r.text();
-  const htmlLen = html.length;
-  const hasSvg = html.includes('/USD.svg');
-  const hasSpot = html.includes('即期匯率');
-
   const usdSell = findRateInHtml(html, 'USD');
   const jpySell = findRateInHtml(html, 'JPY');
 
@@ -54,10 +50,5 @@ export async function fetchCathayRates(): Promise<RateData> {
     return {usdSell, jpySell, updatedAt: new Date().toLocaleTimeString('zh-TW')};
   }
 
-  // 輸出 USD 附近片段供診斷
-  const svgIdx = html.indexOf('/USD.svg');
-  const spotIdx = svgIdx >= 0 ? html.indexOf('即期匯率', svgIdx) : -1;
-  const snippet = spotIdx >= 0 ? html.slice(spotIdx, spotIdx + 200).replace(/\s+/g, ' ') : 'N/A';
-
-  throw new Error(`解析失敗\nHTML:${htmlLen} svg:${hasSvg} 即期:${hasSpot}\n片段:${snippet}`);
+  throw new Error('無法取得匯率，請確認網路連線後再試');
 }
