@@ -1,9 +1,9 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import {Alert, Platform, Linking} from 'react-native';
+import {Alert, Platform} from 'react-native';
 
 export const GITHUB_OWNER = 'bdorz';
 export const GITHUB_REPO = 'book';
-export const CURRENT_VERSION = '1.0.6';
+export const CURRENT_VERSION = '1.0.7';
 
 interface GithubRelease {
   tag_name: string;
@@ -67,9 +67,6 @@ export async function downloadAndInstallApk(
       downloadDest,
       'application/vnd.android.package-archive',
     );
-
-    // 安裝器開啟後刪除暫存 APK
-    ReactNativeBlobUtil.fs.unlink(downloadDest).catch(() => {});
   } catch (e: any) {
     throw new Error(e?.message ?? '下載失敗');
   }
