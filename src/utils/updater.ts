@@ -3,7 +3,7 @@ import {Alert, Platform} from 'react-native';
 
 export const GITHUB_OWNER = 'bdorz';
 export const GITHUB_REPO = 'book';
-export const CURRENT_VERSION = '1.0.17';
+export const CURRENT_VERSION = '1.0.18';
 
 interface GithubRelease {
   tag_name: string;

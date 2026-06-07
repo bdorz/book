@@ -1,5 +1,5 @@
 import React, {useState, useCallback, useMemo} from 'react';
-import {View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView} from 'react-native';
+import {View, Text, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -138,32 +138,40 @@ export default function TransactionsScreen() {
                   const dayIncome = items.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
                   return (
                     <View key={dateKey}>
-                      <TouchableOpacity style={styles.dateHeader} onPress={() => toggleDate(dateKey)} activeOpacity={0.7}>
-                        <Text style={styles.dateLabel}>{d}日</Text>
-                        <View style={styles.dateSummary}>
-                          {dayExpense > 0 && (
-                            <View style={styles.summaryChip}>
-                              <Text style={[styles.summaryChipLabel, {color: colors.expense}]}>支出</Text>
-                              <Text style={[styles.summaryChipAmt, {color: colors.expense}]}>-{dayExpense.toLocaleString()}</Text>
-                            </View>
-                          )}
-                          {dayIncome > 0 && (
-                            <View style={styles.summaryChip}>
-                              <Text style={[styles.summaryChipLabel, {color: colors.income}]}>收入</Text>
-                              <Text style={[styles.summaryChipAmt, {color: colors.income}]}>+{dayIncome.toLocaleString()}</Text>
-                            </View>
-                          )}
-                          {(() => {
-                            const net = dayIncome - dayExpense;
-                            const netColor = net >= 0 ? colors.income : colors.expense;
-                            return (
-                              <Text style={[styles.summaryNet, {color: netColor}]}>
-                                {net >= 0 ? '+' : ''}{net.toLocaleString()}
-                              </Text>
-                            );
-                          })()}
+                      <TouchableOpacity style={styles.dateCard} onPress={() => toggleDate(dateKey)} activeOpacity={0.7}>
+                        {/* Row 1: date + column headers + chevron */}
+                        <View style={styles.dateCardRow}>
+                          <Text style={styles.dateLabel}>{d}日</Text>
+                          <View style={styles.dateCols}>
+                            <Text style={[styles.dateColHeader, {color: colors.expense}]}>支出</Text>
+                            <Text style={[styles.dateColHeader, {color: colors.income}]}>收入</Text>
+                            <Text style={styles.dateColHeader}>總額</Text>
+                          </View>
+                          <Icon name={isCollapsed ? 'chevron-down' : 'chevron-up'} size={16} color={colors.textLight} />
                         </View>
-                        <Icon name={isCollapsed ? 'chevron-down' : 'chevron-up'} size={16} color={colors.textLight} />
+                        {/* Row 2: values */}
+                        <View style={styles.dateCardRow}>
+                          <View style={styles.dateLabelSpacer} />
+                          <View style={styles.dateCols}>
+                            {(() => {
+                              const net = dayIncome - dayExpense;
+                              return (
+                                <>
+                                  <Text style={[styles.dateColValue, {color: dayExpense > 0 ? colors.expense : colors.textLight}]}>
+                                    {dayExpense > 0 ? `-${dayExpense.toLocaleString()}` : '—'}
+                                  </Text>
+                                  <Text style={[styles.dateColValue, {color: dayIncome > 0 ? colors.income : colors.textLight}]}>
+                                    {dayIncome > 0 ? `+${dayIncome.toLocaleString()}` : '—'}
+                                  </Text>
+                                  <Text style={[styles.dateColValue, styles.dateColNet, {color: net >= 0 ? colors.income : colors.expense}]}>
+                                    {net >= 0 ? '+' : ''}{net.toLocaleString()}
+                                  </Text>
+                                </>
+                              );
+                            })()}
+                          </View>
+                          <View style={styles.chevronSpacer} />
+                        </View>
                       </TouchableOpacity>
                       {!isCollapsed && items.map(t => (
                         <TransactionItem
@@ -204,13 +212,15 @@ function createStyles(c: AppColors) {
     listContent: {paddingHorizontal: 16, paddingBottom: 80},
     monthSection: {marginBottom: 8},
     monthLabel: {fontSize: 14, fontWeight: '700', color: c.textSecondary, marginBottom: 4, marginTop: 4},
-    dateHeader: {flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: c.border, marginBottom: 2},
+    dateCard: {backgroundColor: c.card, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 4, elevation: 1, shadowColor: c.shadow, shadowOffset: {width: 0, height: 1}, shadowOpacity: 1, shadowRadius: 2},
+    dateCardRow: {flexDirection: 'row', alignItems: 'center', marginVertical: 1},
     dateLabel: {fontSize: 13, fontWeight: '700', color: c.textPrimary, minWidth: 32},
-    dateSummary: {flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6, flexWrap: 'wrap'},
-    summaryChip: {flexDirection: 'row', alignItems: 'center', gap: 2},
-    summaryChipLabel: {fontSize: 11, fontWeight: '500'},
-    summaryChipAmt: {fontSize: 12, fontWeight: '700'},
-    summaryNet: {fontSize: 12, fontWeight: '800', marginLeft: 2},
+    dateLabelSpacer: {minWidth: 32},
+    dateCols: {flex: 1, flexDirection: 'row'},
+    dateColHeader: {flex: 1, fontSize: 11, fontWeight: '600', color: c.textSecondary, textAlign: 'center'},
+    dateColValue: {flex: 1, fontSize: 13, fontWeight: '700', textAlign: 'center'},
+    dateColNet: {fontWeight: '800'},
+    chevronSpacer: {width: 16},
     empty: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80},
     emptyText: {fontSize: 15, color: c.textLight, marginTop: 12},
     fab: {position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.4, shadowRadius: 8},
