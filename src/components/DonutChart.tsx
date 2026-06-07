@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import Svg, {Path, G} from 'react-native-svg';
 import {useColors, AppColors} from '../context/ThemeContext';
 
@@ -14,6 +14,8 @@ interface Props {
   size?: number;
   strokeWidth?: number;
   title: string;
+  selectedLabel?: string;
+  onSegmentPress?: (label: string) => void;
 }
 
 function polarToCartesian(cx: number, cy: number, r: number, angle: number) {
@@ -30,7 +32,7 @@ function arcPath(cx: number, cy: number, outerR: number, innerR: number, startAn
   return [`M ${s1.x} ${s1.y}`, `A ${outerR} ${outerR} 0 ${large} 1 ${e1.x} ${e1.y}`, `L ${e2.x} ${e2.y}`, `A ${innerR} ${innerR} 0 ${large} 0 ${s2.x} ${s2.y}`, 'Z'].join(' ');
 }
 
-export default function DonutChart({segments, size = 100, strokeWidth = 22, title}: Props) {
+export default function DonutChart({segments, size = 100, strokeWidth = 22, title, selectedLabel, onSegmentPress}: Props) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const cx = size / 2;
@@ -39,8 +41,17 @@ export default function DonutChart({segments, size = 100, strokeWidth = 22, titl
   const innerR = outerR - strokeWidth;
   const total = segments.reduce((s, seg) => s + seg.value, 0);
   const hasData = total > 0;
-  let currentAngle = 0;
   const topCategories = segments.filter(s => s.value > 0).sort((a, b) => b.value - a.value).slice(0, 3);
+
+  // Pre-calculate angles so we can render selected arc larger
+  let currentAngle = 0;
+  const segmentAngles = segments.filter(s => s.value > 0).map(seg => {
+    const sweep = (seg.value / total) * 358;
+    const start = currentAngle;
+    const end = start + sweep;
+    currentAngle = end + 1;
+    return {seg, start, end};
+  });
 
   return (
     <View style={styles.container}>
@@ -48,12 +59,20 @@ export default function DonutChart({segments, size = 100, strokeWidth = 22, titl
       <Svg width={size} height={size}>
         <G>
           {hasData ? (
-            segments.filter(s => s.value > 0).map((seg, i) => {
-              const sweep = (seg.value / total) * 358;
-              const start = currentAngle;
-              const end = currentAngle + sweep;
-              currentAngle = end + 1;
-              return <Path key={i} d={arcPath(cx, cy, outerR, innerR, start, end)} fill={seg.color} />;
+            segmentAngles.map(({seg, start, end}, i) => {
+              const isSelected = seg.label === selectedLabel;
+              const hasSelection = !!selectedLabel;
+              const expandedOuter = isSelected ? outerR + 3 : outerR;
+              const expandedInner = isSelected ? innerR - 2 : innerR;
+              return (
+                <Path
+                  key={i}
+                  d={arcPath(cx, cy, expandedOuter, expandedInner, start, end)}
+                  fill={seg.color}
+                  opacity={hasSelection && !isSelected ? 0.35 : 1}
+                  onPress={() => onSegmentPress?.(seg.label)}
+                />
+              );
             })
           ) : (
             <Path d={arcPath(cx, cy, outerR, innerR, 0, 359.9)} fill={colors.border} />
@@ -62,13 +81,17 @@ export default function DonutChart({segments, size = 100, strokeWidth = 22, titl
       </Svg>
       <View style={styles.legend}>
         {hasData ? (
-          topCategories.map((seg, i) => (
-            <View key={i} style={styles.legendRow}>
-              <View style={[styles.dot, {backgroundColor: seg.color}]} />
-              <Text style={styles.legendLabel} numberOfLines={1}>{seg.label}</Text>
-              <Text style={styles.legendPct}>({Math.round((seg.value / total) * 100)}%)</Text>
-            </View>
-          ))
+          topCategories.map((seg, i) => {
+            const isSelected = seg.label === selectedLabel;
+            const hasSelection = !!selectedLabel;
+            return (
+              <TouchableOpacity key={i} style={styles.legendRow} onPress={() => onSegmentPress?.(seg.label)} activeOpacity={0.7}>
+                <View style={[styles.dot, {backgroundColor: seg.color, opacity: hasSelection && !isSelected ? 0.35 : 1}]} />
+                <Text style={[styles.legendLabel, {opacity: hasSelection && !isSelected ? 0.35 : 1}]} numberOfLines={1}>{seg.label}</Text>
+                <Text style={[styles.legendPct, {opacity: hasSelection && !isSelected ? 0.35 : 1}]}>({Math.round((seg.value / total) * 100)}%)</Text>
+              </TouchableOpacity>
+            );
+          })
         ) : (
           <Text style={styles.emptyText}>無資料</Text>
         )}

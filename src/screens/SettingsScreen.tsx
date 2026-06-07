@@ -12,6 +12,7 @@ type SettingsNavProp = NativeStackNavigationProp<RootStackParamList>;
 import {getSettings, saveSettings} from '../storage/database';
 import {fetchLatestRelease, hasNewVersion, downloadAndInstallApk, CURRENT_VERSION} from '../utils/updater';
 import {getNotificationSettings, saveNotificationSettings, scheduleReminders, cancelAllReminders, requestNotificationPermission, NotificationSettings} from '../utils/notifications';
+import {getStoredPat, saveGistPat, backupToGist, restoreFromGist, getLastBackupTime} from '../utils/gistBackup';
 
 type UpdateStatus = 'idle' | 'checking' | 'latest' | 'available' | 'downloading';
 
@@ -134,6 +135,10 @@ export default function SettingsScreen() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [latestTag, setLatestTag] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
+  const [gistPat, setGistPat] = useState('');
+  const [patVisible, setPatVisible] = useState(false);
+  const [backupStatus, setBackupStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+  const [lastBackup, setLastBackup] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -144,6 +149,8 @@ export default function SettingsScreen() {
         setEstimatedIncomes(s.estimated_incomes ?? []);
       });
       getNotificationSettings().then(setNotifSettings);
+      getStoredPat().then(setGistPat);
+      getLastBackupTime().then(setLastBackup);
     }, []),
   );
 
@@ -179,6 +186,46 @@ export default function SettingsScreen() {
   const deleteFixedExpense = (id: string) => { const u = fixedExpenses.filter(i => i.id !== id); setFixedExpenses(u); autoSave(u, estimatedIncomes); };
   const addEstimatedIncome = (name: string, amount: number) => { const u = [...estimatedIncomes, {id: `${Date.now()}`, name, amount}]; setEstimatedIncomes(u); autoSave(fixedExpenses, u); };
   const deleteEstimatedIncome = (id: string) => { const u = estimatedIncomes.filter(i => i.id !== id); setEstimatedIncomes(u); autoSave(fixedExpenses, u); };
+
+  const handleSavePat = async () => {
+    await saveGistPat(gistPat);
+    Alert.alert('已儲存', 'PAT 已儲存至裝置');
+  };
+
+  const handleBackup = async () => {
+    setBackupStatus('running');
+    try {
+      await backupToGist(gistPat);
+      const t = await getLastBackupTime();
+      setLastBackup(t);
+      setBackupStatus('done');
+      setTimeout(() => setBackupStatus('idle'), 3000);
+    } catch (e: any) {
+      Alert.alert('備份失敗', e?.message ?? '請確認 PAT 是否正確');
+      setBackupStatus('error');
+      setTimeout(() => setBackupStatus('idle'), 3000);
+    }
+  };
+
+  const handleRestore = () => {
+    Alert.alert(
+      '從雲端還原',
+      '將以備份資料覆蓋本機所有交易記錄，確定要繼續？',
+      [
+        {text: '取消', style: 'cancel'},
+        {
+          text: '確認還原', style: 'destructive', onPress: async () => {
+            try {
+              await restoreFromGist(gistPat);
+              Alert.alert('還原成功', '資料已從 GitHub Gist 還原');
+            } catch (e: any) {
+              Alert.alert('還原失敗', e?.message ?? '請確認 PAT 與備份記錄是否存在');
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleClearData = () => {
     Alert.alert('清除所有資料', '確定要清除所有交易記錄嗎？此操作無法復原。', [
@@ -323,6 +370,55 @@ export default function SettingsScreen() {
         <Text style={styles.saveBtnText}>{saved ? '已儲存！' : '儲存設定'}</Text>
       </TouchableOpacity>
 
+      {/* 雲端備份 */}
+      <View style={styles.section}>
+        <View style={styles.backupHeader}>
+          <Icon name="cloud-upload-outline" size={20} color={colors.primary} />
+          <View style={{flex: 1}}>
+            <Text style={styles.sectionTitle}>雲端備份（GitHub Gist）</Text>
+            <Text style={styles.sectionHint}>{lastBackup ? `上次備份：${lastBackup}` : '尚未備份'}</Text>
+          </View>
+        </View>
+        <View style={styles.patRow}>
+          <TextInput
+            style={styles.patInput}
+            value={gistPat}
+            onChangeText={setGistPat}
+            placeholder="貼上 GitHub Personal Access Token"
+            placeholderTextColor={colors.textLight}
+            secureTextEntry={!patVisible}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TouchableOpacity onPress={() => setPatVisible(v => !v)} style={styles.eyeBtn}>
+            <Icon name={patVisible ? 'eye-off' : 'eye'} size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity style={[styles.patSaveBtn, {backgroundColor: colors.primary + '15', borderColor: colors.primary + '40'}]} onPress={handleSavePat} activeOpacity={0.8}>
+          <Icon name="content-save-outline" size={15} color={colors.primary} />
+          <Text style={[styles.patSaveBtnText, {color: colors.primary}]}>儲存 PAT</Text>
+        </TouchableOpacity>
+        <View style={styles.backupBtns}>
+          <TouchableOpacity
+            style={[styles.backupBtn, {backgroundColor: backupStatus === 'done' ? colors.income + '15' : colors.primary + '10', borderColor: backupStatus === 'done' ? colors.income + '40' : colors.primary + '30'}]}
+            onPress={handleBackup}
+            disabled={backupStatus === 'running'}
+            activeOpacity={0.8}>
+            <Icon name={backupStatus === 'done' ? 'check-circle' : 'cloud-upload'} size={16} color={backupStatus === 'done' ? colors.income : colors.primary} />
+            <Text style={[styles.backupBtnText, {color: backupStatus === 'done' ? colors.income : colors.primary}]}>
+              {backupStatus === 'running' ? '備份中...' : backupStatus === 'done' ? '備份完成' : '立即備份'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.backupBtn, {backgroundColor: colors.expense + '10', borderColor: colors.expense + '30'}]}
+            onPress={handleRestore}
+            activeOpacity={0.8}>
+            <Icon name="cloud-download" size={16} color={colors.expense} />
+            <Text style={[styles.backupBtnText, {color: colors.expense}]}>從雲端還原</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* 更新 */}
       <View style={styles.section}>
         <View style={styles.updateHeader}>
@@ -427,5 +523,14 @@ function createStyles(c: AppColors) {
     navRow: {flexDirection: 'row', alignItems: 'center', gap: 12},
     navIconWrap: {width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center'},
     navContent: {flex: 1},
+    backupHeader: {flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12},
+    patRow: {flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: c.border, borderRadius: 10, paddingHorizontal: 10, marginBottom: 8},
+    patInput: {flex: 1, fontSize: 13, color: c.textPrimary, paddingVertical: 10},
+    eyeBtn: {padding: 8},
+    patSaveBtn: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 8, borderWidth: 1, gap: 6, marginBottom: 10},
+    patSaveBtnText: {fontSize: 13, fontWeight: '600'},
+    backupBtns: {flexDirection: 'row', gap: 8},
+    backupBtn: {flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10, borderWidth: 1, gap: 6},
+    backupBtnText: {fontSize: 13, fontWeight: '600'},
   });
 }

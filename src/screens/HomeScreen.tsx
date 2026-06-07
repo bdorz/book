@@ -1,5 +1,5 @@
 import React, {useState, useCallback, useMemo} from 'react';
-import {View, Text, StyleSheet, ScrollView, TouchableOpacity} from 'react-native';
+import {View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -55,6 +55,9 @@ export default function HomeScreen() {
   const [fixedExpense, setFixedExpense] = useState(0);
   const [estimatedIncome, setEstimatedIncome] = useState(0);
   const [userName, setUserName] = useState('');
+  const [selectedExpCat, setSelectedExpCat] = useState<string | null>(null);
+  const [selectedCCCat, setSelectedCCCat] = useState<string | null>(null);
+  const [catModal, setCatModal] = useState<{type: 'expense' | 'credit_card'; label: string} | null>(null);
 
   const now = new Date();
   const year = now.getFullYear();
@@ -159,9 +162,37 @@ export default function HomeScreen() {
         </View>
 
         <View style={[styles.card, styles.chartsRow]}>
-          <DonutChart title="支出分類" segments={buildChartSegments(transactions, 'expense')} size={110} />
+          <DonutChart
+            title="支出分類"
+            segments={buildChartSegments(transactions, 'expense')}
+            size={110}
+            selectedLabel={selectedExpCat ?? undefined}
+            onSegmentPress={label => {
+              if (selectedExpCat === label) {
+                setSelectedExpCat(null);
+              } else {
+                setSelectedExpCat(label);
+                setSelectedCCCat(null);
+                setCatModal({type: 'expense', label});
+              }
+            }}
+          />
           <View style={styles.chartDivider} />
-          <DonutChart title="信用卡分類" segments={buildChartSegments(transactions, 'credit_card')} size={110} />
+          <DonutChart
+            title="信用卡分類"
+            segments={buildChartSegments(transactions, 'credit_card')}
+            size={110}
+            selectedLabel={selectedCCCat ?? undefined}
+            onSegmentPress={label => {
+              if (selectedCCCat === label) {
+                setSelectedCCCat(null);
+              } else {
+                setSelectedCCCat(label);
+                setSelectedExpCat(null);
+                setCatModal({type: 'credit_card', label});
+              }
+            }}
+          />
         </View>
 
         <View style={styles.recentSection}>
@@ -185,6 +216,37 @@ export default function HomeScreen() {
 
         <View style={{height: 20}} />
       </ScrollView>
+
+      <Modal visible={!!catModal} animationType="slide" transparent onRequestClose={() => { setCatModal(null); setSelectedExpCat(null); setSelectedCCCat(null); }}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => { setCatModal(null); setSelectedExpCat(null); setSelectedCCCat(null); }}>
+          <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalTitleRow}>
+              <Text style={styles.modalTitle}>{catModal?.label}</Text>
+              <TouchableOpacity onPress={() => { setCatModal(null); setSelectedExpCat(null); setSelectedCCCat(null); }}>
+                <Icon name="close" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {transactions
+                .filter(t => catModal && t.type === catModal.type && t.category === catModal.label)
+                .map(t => (
+                  <TransactionItem
+                    key={t.id}
+                    transaction={t}
+                    onPress={tx => {
+                      setCatModal(null);
+                      setSelectedExpCat(null);
+                      setSelectedCCCat(null);
+                      navigation.navigate('AddEditTransaction', {transactionId: tx.id});
+                    }}
+                  />
+                ))}
+              <View style={{height: 20}} />
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -229,5 +291,10 @@ function createStyles(c: AppColors) {
     seeAll: {fontSize: 13, fontWeight: '600'},
     emptyState: {alignItems: 'center', paddingVertical: 24},
     emptyText: {fontSize: 14, color: c.textLight, marginTop: 8},
+    modalOverlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end'},
+    modalSheet: {backgroundColor: c.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16, paddingBottom: 0, maxHeight: '70%'},
+    modalHandle: {width: 40, height: 4, backgroundColor: c.border, borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 12},
+    modalTitleRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12},
+    modalTitle: {fontSize: 16, fontWeight: '700', color: c.textPrimary},
   });
 }
