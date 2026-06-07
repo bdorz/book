@@ -29,12 +29,18 @@ export default function TransactionsScreen() {
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
+  const todayStr = `${year}-${String(month).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
   useFocusEffect(
     useCallback(() => {
       getAllTransactions().then(all => {
-        setTransactions(all.filter(t => t.type !== 'family_in' && t.type !== 'family_out'));
+        const txs = all.filter(t => t.type !== 'family_in' && t.type !== 'family_out');
+        setTransactions(txs);
+        // Pre-collapse all dates except today
+        const allDates = new Set(txs.map(t => t.date).filter(d => d !== todayStr));
+        setCollapsedDates(allDates);
       });
-    }, []),
+    }, [todayStr]),
   );
 
   const toggleDate = (key: string) => {
@@ -136,15 +142,26 @@ export default function TransactionsScreen() {
                         <Text style={styles.dateLabel}>{d}日</Text>
                         <View style={styles.dateSummary}>
                           {dayExpense > 0 && (
-                            <Text style={[styles.dateSummaryText, {color: colors.expense}]}>
-                              -{dayExpense.toLocaleString()}
-                            </Text>
+                            <View style={styles.summaryChip}>
+                              <Text style={[styles.summaryChipLabel, {color: colors.expense}]}>支出</Text>
+                              <Text style={[styles.summaryChipAmt, {color: colors.expense}]}>-{dayExpense.toLocaleString()}</Text>
+                            </View>
                           )}
                           {dayIncome > 0 && (
-                            <Text style={[styles.dateSummaryText, {color: colors.income}]}>
-                              +{dayIncome.toLocaleString()}
-                            </Text>
+                            <View style={styles.summaryChip}>
+                              <Text style={[styles.summaryChipLabel, {color: colors.income}]}>收入</Text>
+                              <Text style={[styles.summaryChipAmt, {color: colors.income}]}>+{dayIncome.toLocaleString()}</Text>
+                            </View>
                           )}
+                          {(() => {
+                            const net = dayIncome - dayExpense;
+                            const netColor = net >= 0 ? colors.income : colors.expense;
+                            return (
+                              <Text style={[styles.summaryNet, {color: netColor}]}>
+                                {net >= 0 ? '+' : ''}{net.toLocaleString()}
+                              </Text>
+                            );
+                          })()}
                         </View>
                         <Icon name={isCollapsed ? 'chevron-down' : 'chevron-up'} size={16} color={colors.textLight} />
                       </TouchableOpacity>
@@ -189,8 +206,11 @@ function createStyles(c: AppColors) {
     monthLabel: {fontSize: 14, fontWeight: '700', color: c.textSecondary, marginBottom: 4, marginTop: 4},
     dateHeader: {flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: c.border, marginBottom: 2},
     dateLabel: {fontSize: 13, fontWeight: '700', color: c.textPrimary, minWidth: 32},
-    dateSummary: {flex: 1, flexDirection: 'row', gap: 8, paddingHorizontal: 8},
-    dateSummaryText: {fontSize: 13, fontWeight: '600'},
+    dateSummary: {flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6, flexWrap: 'wrap'},
+    summaryChip: {flexDirection: 'row', alignItems: 'center', gap: 2},
+    summaryChipLabel: {fontSize: 11, fontWeight: '500'},
+    summaryChipAmt: {fontSize: 12, fontWeight: '700'},
+    summaryNet: {fontSize: 12, fontWeight: '800', marginLeft: 2},
     empty: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80},
     emptyText: {fontSize: 15, color: c.textLight, marginTop: 12},
     fab: {position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.4, shadowRadius: 8},
